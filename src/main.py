@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from query_verse.db.config import SessionLocal, init_db
-from query_verse.agents.rag_agent import RAGAgent
+from query_verse.agents.rag import RAGAgent
 from query_verse.chat.schemas import QueryVerseInputQuery
 from langchain_core.messages import HumanMessage
 import time
