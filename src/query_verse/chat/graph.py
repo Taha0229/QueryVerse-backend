@@ -13,6 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from query_verse.chains.supervisor import create_supervisor
 from query_verse.agents.rag import RAGAgent
+from query_verse.agents.sql import SQLAgent
 from query_verse.chains.conversational import create_conversational_chain
 
 load_dotenv(find_dotenv())
@@ -33,6 +34,7 @@ class Graph:
     def __init__(self, checkpointer: Optional[str] = None):
         self.supervisor = create_supervisor(model=self.llm)
         self.rag = RAGAgent()
+        self.sql = SQLAgent()
         self.conversation_chain = create_conversational_chain(model=self.lighter_llm)
 
         graph = StateGraph(AgentState)
@@ -67,7 +69,7 @@ class Graph:
         print("---- NAVIGATING TO RAG ----")
         return self.rag.agent.invoke(
             state
-        )  # updating the Graph's state with overlapping keys in RAG state
+        )  # updating the Graph's state with overlapping keys in RAG state -> The messages in RAG is handled in a way to just return final AI message
 
     def conversational_agent(self, state: AgentState):
         print("---- CONVERSATIONAL AGENT -----")
@@ -76,11 +78,8 @@ class Graph:
 
     def sql_agent(self, state: AgentState):
         print("---- SQL Agent ----")
-        return {
-            "messages": [
-                AIMessage(content="SQL Agent is under construction", name="SQL Agent")
-            ]
-        }
+        res = self.sql.agent.invoke(state)
+        return {"messages": [res["messages"][-1]]}
 
 
 # test code
