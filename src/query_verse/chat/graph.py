@@ -1,14 +1,10 @@
-import os
-import json
 from dotenv import load_dotenv, find_dotenv
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END, START
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_community.tools.tavily_search import TavilySearchResults
-from typing import Optional, TypedDict, List, Annotated, Literal
-from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
+from typing import Optional, TypedDict, Annotated
+from langchain_core.messages import AIMessage
 
 
 from query_verse.chains.supervisor import create_supervisor
@@ -50,6 +46,7 @@ class Graph:
                 "SQL Agent": "sql_agent",
                 "RAG Agent": "rag_agent",
                 "Conversational Agent": "conversational_agent",
+                "FINISH": END
             },
         )
 
@@ -57,7 +54,7 @@ class Graph:
         graph.add_edge("conversational_agent", END)
         graph.add_edge("sql_agent", END)
 
-        self.graph = graph.compile()
+        self.graph = graph.compile(checkpointer=checkpointer)
 
     def supervise(self, state: AgentState):
         print("---- SUPERVISOR -----")
@@ -74,7 +71,7 @@ class Graph:
     def conversational_agent(self, state: AgentState):
         print("---- CONVERSATIONAL AGENT -----")
         conv_res = self.conversation_chain.invoke({"question": state["question"]})
-        return {"messages": [AIMessage(content=conv_res, name="Conversational Agent")]}
+        return {"messages": [AIMessage(content=conv_res, name="conversational_agent")]}
 
     def sql_agent(self, state: AgentState):
         print("---- SQL Agent ----")

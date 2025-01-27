@@ -90,7 +90,7 @@ class RAGAgent:
         return "\n\n".join(doc.page_content for doc in docs)
 
     def final_message(self, state: RagState):
-        return {"messages": [AIMessage(content=state["generation"], name="RAG Agent")]}
+        return {"messages": [AIMessage(content=state["generation"], name="rag_agent")]}
 
     ## Nodes definition
     def retrieve(self, state: RagState):
