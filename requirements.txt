@@ -94,7 +94,6 @@ pytest-socket==0.7.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.20
-pywin32==308
 PyYAML==6.0.2
 pyzmq==26.2.0
 -e .
