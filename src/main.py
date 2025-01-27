@@ -24,7 +24,7 @@ middleware = [
 
 app = FastAPI(middleware=middleware)
 
-MONGODB_URI = f"{os.getenv("MONGO_URI")}"
+MONGODB_URI = f'{os.getenv("MONGO_URI")}'
 mongodb_client = MongoClient(MONGODB_URI)
 checkpointer = MongoDBSaver(mongodb_client)
 query_verse = Graph(checkpointer=checkpointer)
