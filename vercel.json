@@ -1,4 +1,5 @@
 {
+    "version": 2,
     "builds": [
       {
         "src": "src/main.py",
@@ -8,7 +9,9 @@
     "routes": [
       {
         "src": "/(.*)",
-        "dest": "main.py"
+        "dest": "src/main.py"
       }
-    ]
+    ],
+    "installCommand": "pip install -r requirements/dev.txt"
   }
+  
