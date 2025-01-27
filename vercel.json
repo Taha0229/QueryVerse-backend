@@ -12,6 +12,6 @@
         "dest": "src/main.py"
       }
     ],
-    "installCommand": "pip install -r requirements/dev.txt"
+    "install": "pip install -r requirements/dev.txt"
   }
   
