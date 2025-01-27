@@ -53,6 +53,7 @@ langgraph-checkpoint==2.0.10
 langgraph-checkpoint-mongodb==0.1.0
 langgraph-sdk==0.1.51
 langsmith==0.3.1
+lz4==4.4.3
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 marshmallow==3.26.0
@@ -70,6 +71,7 @@ openai==1.60.1
 opencv-python==4.11.0.86
 orjson==3.10.15
 packaging==24.2
+pandas==2.2.3
 parso==0.8.4
 pillow==11.1.0
 pinecone==5.4.2
@@ -96,10 +98,11 @@ pytest-socket==0.7.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.20
+pytz==2024.2
 pywin32==308
 PyYAML==6.0.2
 pyzmq==26.2.0
--e .
+-e git+https://github.com/Taha0229/QueryVerse-backend.git@75ee88907d307a864766d79e1f6dd435ef566fbb#egg=query_verse
 rapidocr-onnxruntime==1.4.4
 regex==2024.11.6
 requests==2.32.3
@@ -112,6 +115,7 @@ shellingham==1.5.4
 six==1.17.0
 sniffio==1.3.1
 SQLAlchemy==2.0.37
+sqlitecloud==0.0.83
 stack-data==0.6.3
 starlette==0.45.3
 sympy==1.13.3
@@ -126,6 +130,7 @@ typer==0.15.1
 types-requests==2.32.0.20241016
 typing-inspect==0.9.0
 typing_extensions==4.12.2
+tzdata==2025.1
 urllib3==2.3.0
 uvicorn==0.34.0
 watchfiles==1.0.4
