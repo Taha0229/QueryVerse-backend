@@ -131,9 +131,22 @@ class SupervisorAgent:
     
     
 # if __name__ == "__main__":
+#     agent = SupervisorAgent()
+    
+#     from langchain_core.runnables.graph import MermaidDrawMethod
+#     from IPython.display import Image, display
+
+#     png_data = agent.agent.get_graph().draw_mermaid_png(
+#         draw_method=MermaidDrawMethod.API,
+#     )
+#     with open("public/supervisor_agent.png", "wb") as f:
+#         f.write(png_data)
+
+#     print("Image saved as 'agent_graph.png'")
+
 #     from langchain_core.messages import HumanMessage
 
-#     agent = SupervisorAgent()
+#     
 #     questions = [
 #         "who has purchased the most products?",
 #         "What is the price of iphone 14",

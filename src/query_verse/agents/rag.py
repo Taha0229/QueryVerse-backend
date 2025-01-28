@@ -223,9 +223,21 @@ class RAGAgent:
 
 
 # if __name__ == "__main__":
-#     print("testing RAG agent")
 
 #     rag_agent = RAGAgent()
+    
+#     from langchain_core.runnables.graph import MermaidDrawMethod
+
+#     png_data = rag_agent.agent.get_graph().draw_mermaid_png(
+#         draw_method=MermaidDrawMethod.API,
+#     )
+#     with open("public/rag_agent.png", "wb") as f:
+#         f.write(png_data)
+
+#     print("Image saved as 'rag_agent.png'")
+#     print("testing RAG agent")
+
+#     
 
 #     questions = [
 #         "What is JioTag",

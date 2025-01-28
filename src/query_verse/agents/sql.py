@@ -237,6 +237,18 @@ class SQLAgent:
 
 
 # if __name__ == "__main__":
+#     sql_agent = SQLAgent()
+    
+#     from langchain_core.runnables.graph import MermaidDrawMethod
+
+#     png_data = sql_agent.agent.get_graph().draw_mermaid_png(
+#         draw_method=MermaidDrawMethod.API,
+#     )
+#     with open("public/sql_agent.png", "wb") as f:
+#         f.write(png_data)
+
+#     print("Image saved as 'sql_agent.png'")
+    
 #     from langchain_core.messages import HumanMessage
 
 #     sql_agent = SQLAgent()
