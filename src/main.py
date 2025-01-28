@@ -3,7 +3,7 @@ import time
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware import Middleware
-from query_verse.chat.graph import PlannerAgent
+from query_verse.chat.graph import SupervisorAgent
 from query_verse.chat.schemas import QueryVerseInputQuery, AddConversationHistory
 from query_verse.db.conversation_history_manager import ConversationHistoryManager
 from pymongo import MongoClient
@@ -26,7 +26,7 @@ app = FastAPI(middleware=middleware)
 MONGODB_URI = f'{os.getenv("MONGO_URI")}'
 mongodb_client = MongoClient(MONGODB_URI)
 checkpointer = MongoDBSaver(mongodb_client)
-query_verse = PlannerAgent(checkpointer=checkpointer)
+query_verse = SupervisorAgent(checkpointer=checkpointer)
 
 @app.get("/")
 def read_root():
