@@ -222,25 +222,25 @@ class RAGAgent:
             return "not supported"
 
 
-if __name__ == "__main__":
-    print("testing RAG agent")
+# if __name__ == "__main__":
+#     print("testing RAG agent")
 
-    rag_agent = RAGAgent()
+#     rag_agent = RAGAgent()
 
-    questions = [
-        "What is JioTag",
-        "What are the key features of iphone 14",
-        "Give details of RTX 5090",
-        "What are positives and negatives of Sony Alpha 7 camera",
-        "What are the configurations of Kingston's RAM",
-        "Compare between Samsung S24 and iphone 14",
-        "What is Legion M600",
-        "What is the price of OnePlus nord buds 2r"
-    ]
+#     questions = [
+#         "What is JioTag",
+#         "What are the key features of iphone 14",
+#         "Give details of RTX 5090",
+#         "What are positives and negatives of Sony Alpha 7 camera",
+#         "What are the configurations of Kingston's RAM",
+#         "Compare between Samsung S24 and iphone 14",
+#         "What is Legion M600",
+#         "What is the price of OnePlus nord buds 2r"
+#     ]
 
-    from query_verse.config import BASE_DIR
+#     from query_verse.config import BASE_DIR
 
-    with open(f"{BASE_DIR}/tests/RAG/output.txt", "a", encoding="utf-8") as file:
-        for ind, question in enumerate(questions):
-            response = rag_agent.agent.invoke({"question": question})
-            file.writelines(f"{ind+1}. {question}\n{response["generation"]}\n\n")
+#     with open(f"{BASE_DIR}/tests/RAG/output.txt", "a", encoding="utf-8") as file:
+#         for ind, question in enumerate(questions):
+#             response = rag_agent.agent.invoke({"question": question})
+#             file.writelines(f"{ind+1}. {question}\n{response['generation']}\n\n")

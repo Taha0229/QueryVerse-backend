@@ -236,25 +236,25 @@ class SQLAgent:
         return {"messages": [res]}
 
 
-if __name__ == "__main__":
-    from langchain_core.messages import HumanMessage
+# if __name__ == "__main__":
+#     from langchain_core.messages import HumanMessage
 
-    sql_agent = SQLAgent()
-    questions = [
-        "how many users are there?",
-        "who has purchased the most products?",
-        "What is the price of iphone 14",
-        "List the products purchased by Jack",
-        "What is the total order value",
-        "Which is the most expensive product that you have",
-        "How much does Harry and Issac has spent till now",
-        "What all products has leo has purchased",
-        "Who has bought the most number of products"
-    ]
-    from query_verse.config import BASE_DIR
+#     sql_agent = SQLAgent()
+#     questions = [
+#         "how many users are there?",
+#         "who has purchased the most products?",
+#         "What is the price of iphone 14",
+#         "List the products purchased by Jack",
+#         "What is the total order value",
+#         "Which is the most expensive product that you have",
+#         "How much does Harry and Issac has spent till now",
+#         "What all products has leo has purchased",
+#         "Who has bought the most number of products"
+#     ]
+#     from query_verse.config import BASE_DIR
 
-    with open(f"{BASE_DIR}/tests/SQL/output.txt", "a", encoding="utf-8") as file:
-        for ind, question in enumerate(questions):
-            response = sql_agent.agent.invoke({"question": question, "messages": [HumanMessage(content=question)]})
-            file.writelines(f"{ind+1}. {question}\n{response["messages"][-1].content}\n\n")
+#     with open(f"{BASE_DIR}/tests/SQL/output.txt", "a", encoding="utf-8") as file:
+#         for ind, question in enumerate(questions):
+#             response = sql_agent.agent.invoke({"question": question, "messages": [HumanMessage(content=question)]})
+#             file.writelines(f"{ind+1}. {question}\n{response['messages'][-1].content}\n\n")
 

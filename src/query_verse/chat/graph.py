@@ -130,42 +130,42 @@ class SupervisorAgent:
     
     
     
-if __name__ == "__main__":
-    from langchain_core.messages import HumanMessage
+# if __name__ == "__main__":
+#     from langchain_core.messages import HumanMessage
 
-    agent = SupervisorAgent()
-    questions = [
-        "who has purchased the most products?",
-        "What is the price of iphone 14",
-        "What all products has Neo has purchased",
-        "Who has bought the most number of products",
-        "Hello",
-        "What is your name?",
-        "What are the key features of iphone 14",
-        "What is Legion M600",
-        "Compare between Samsung S24 and iphone 14",
-        "What are features of Google Pixel 9",
-        "What is the price of Realme 9 Pro Plus in India",
-        "Can you get me details of product with product id 5",
-        "Provide in depth details of the products that Alice has purchased",
-        "Find me insights on most ordered product",
-        "What are features of cheapest product"
-    ]    
-    questions = [
-        # "who has purchased the most products?",
-        # "What is the price of iphone 14",
-        # "What all products has Neo has purchased",
-        # "Who has bought the most number of products",
-        "Can you get me details of product with product id 5",
-        "Provide in depth details of the products that Alice has purchased",
-        "Find me insights on most ordered product",
-        "What are features of cheapest product"
-    ]
+#     agent = SupervisorAgent()
+#     questions = [
+#         "who has purchased the most products?",
+#         "What is the price of iphone 14",
+#         "What all products has Neo has purchased",
+#         "Who has bought the most number of products",
+#         "Hello",
+#         "What is your name?",
+#         "What are the key features of iphone 14",
+#         "What is Legion M600",
+#         "Compare between Samsung S24 and iphone 14",
+#         "What are features of Google Pixel 9",
+#         "What is the price of Realme 9 Pro Plus in India",
+#         "Can you get me details of product with product id 5",
+#         "Provide in depth details of the products that Alice has purchased",
+#         "Find me insights on most ordered product",
+#         "What are features of cheapest product"
+#     ]    
+#     questions = [
+#         # "who has purchased the most products?",
+#         # "What is the price of iphone 14",
+#         # "What all products has Neo has purchased",
+#         # "Who has bought the most number of products",
+#         "Can you get me details of product with product id 5",
+#         "Provide in depth details of the products that Alice has purchased",
+#         "Find me insights on most ordered product",
+#         "What are features of cheapest product"
+#     ]
     
-    from query_verse.config import BASE_DIR
+#     from query_verse.config import BASE_DIR
 
-    with open(f"{BASE_DIR}/tests/QueryVerse/output.txt", "a", encoding="utf-8") as file:
-        for ind, question in enumerate(questions):
-            print(f"/*--- Performing: {question} ---*/")
-            response = agent.agent.invoke({"question": question, "messages": [HumanMessage(content=question)]})
-            file.writelines(f"{ind+1}. {question}\n{response["messages"][-1].content}\n\n")
+#     with open(f"{BASE_DIR}/tests/QueryVerse/output.txt", "a", encoding="utf-8") as file:
+#         for ind, question in enumerate(questions):
+#             print(f"/*--- Performing: {question} ---*/")
+#             response = agent.agent.invoke({"question": question, "messages": [HumanMessage(content=question)]})
+#             file.writelines(f"{ind+1}. {question}\n{response['messages'][-1].content}\n\n")
