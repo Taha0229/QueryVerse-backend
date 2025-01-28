@@ -2,8 +2,7 @@ from langchain_core.messages import AIMessage
 
 from langgraph.graph.message import add_messages
 from typing import TypedDict, Annotated
-from langchain_openai import OpenAIEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.documents import Document
 from langgraph.graph.state import StateGraph, END
@@ -33,7 +32,7 @@ class RAGAgent:
     index_name = "query-verse"
     vector_store = PineconeVectorStore(index_name=index_name, embedding=embedding_model)
     retriever = vector_store.as_retriever(search_kwargs={"k": 5})
-    web_search_tool = TavilySearchResults(max_results=2)
+    web_search_tool = TavilySearchResults(max_results=4)
 
     def __init__(self):
         self.retrieval_grader = create_document_grader_chain(model=self.llm)
@@ -45,6 +44,8 @@ class RAGAgent:
         self.hallucination_grader = create_hallucination_grader_chain(model=self.llm)
 
         self.re_writer_counter = 1
+        self.answer_relevance_counter = 1
+        self.web_search_counter = 2
 
         workflow = StateGraph(RagState)
 
@@ -81,7 +82,7 @@ class RAGAgent:
             },
         )
         workflow.add_edge("final_message", END)
-        
+
         self.agent = workflow.compile()
 
     ## Utility functions
@@ -117,7 +118,7 @@ class RAGAgent:
         return {"web_search_results": docs, "documents": documents}
 
     def grade_documents(self, state: RagState):
-        print("---CHECK DOCUMENT RELEVANCE TO QUESTION---")
+        print("----CHECK DOCUMENT RELEVANCE TO QUESTION----")
 
         question = state["question"]
         documents = state["documents"]
@@ -131,15 +132,15 @@ class RAGAgent:
             )
             grade = score.binary_score
             if grade == "yes":
-                print("---GRADE: DOCUMENT RELEVANT---")
+                print("----GRADE: DOCUMENT RELEVANT----")
                 filtered_docs.append(doc)
             else:
-                print("---GRADE: DOCUMENT NOT RELEVANT---")
+                print("----GRADE: DOCUMENT NOT RELEVANT----")
                 continue
         return {"documents": filtered_docs, "question": question}
 
     def generate(self, state: RagState):
-        print("---GENERATE---")
+        print("----GENERATE----")
 
         question = state["question"]
         filtered_documents = state["documents"]
@@ -151,19 +152,21 @@ class RAGAgent:
         return {"question": question, "generation": generation}
 
     def query_transformation(self, state: RagState):
-        print("---TRANSFORM QUERY---")
+        print("----TRANSFORM QUERY----")
         question = state["question"]
 
         # Re-write question
         better_question = self.transform_query_chain.invoke({"question": question})
+        print("transformed query: ", better_question)
         return {"question": better_question}
 
     ## Edges
     def context_relevance(self, state: RagState):
-        """Context Relevance is one of the three triads for RAG Evaluation which deals with retrieved documents relevance. If None of the retrieved documents is relevant then we re-write the user's query and try to retrieve relevant documents"""
+        """Context Relevance is one of the three triads for RAG Evaluation which deals with retrieved documents relevance.
+        If None of the retrieved documents is relevant then we re-write the user's query and try to retrieve relevant documents
+        """
+
         filtered_documents = state["documents"]
-        print("filtered documents")
-        print(filtered_documents)
 
         if not filtered_documents:
             if self.re_writer_counter >= 1:
@@ -172,7 +175,8 @@ class RAGAgent:
                 )
                 self.re_writer_counter -= 1
                 return "transform_query"
-            else:
+
+            elif self.web_search_counter >= 2:
                 print(
                     "---DECISION: ALL DOCUMENTS ARE NOT RELEVANT TO QUESTION AGAIN, WEB SEARCH---"
                 )
@@ -207,8 +211,36 @@ class RAGAgent:
                 print("---DECISION: GENERATION ADDRESSES QUESTION---")
                 return "useful"
             else:
+                if self.answer_relevance_counter <= 0:
+                    print("exiting early from answer relevance grader")
+                    return "useful"
                 print("---DECISION: GENERATION DOES NOT ADDRESS QUESTION---")
+                self.answer_relevance_counter -= 1
                 return "not useful"
         else:
             print("---DECISION: GENERATION IS NOT GROUNDED IN DOCUMENTS, RE-TRY---")
             return "not supported"
+
+
+if __name__ == "__main__":
+    print("testing RAG agent")
+
+    rag_agent = RAGAgent()
+
+    questions = [
+        "What is JioTag",
+        "What are the key features of iphone 14",
+        "Give details of RTX 5090",
+        "What are positives and negatives of Sony Alpha 7 camera",
+        "What are the configurations of Kingston's RAM",
+        "Compare between Samsung S24 and iphone 14",
+        "What is Legion M600",
+        "What is the price of OnePlus nord buds 2r"
+    ]
+
+    from query_verse.config import BASE_DIR
+
+    with open(f"{BASE_DIR}/tests/RAG/output.txt", "a", encoding="utf-8") as file:
+        for ind, question in enumerate(questions):
+            response = rag_agent.agent.invoke({"question": question})
+            file.writelines(f"{ind+1}. {question}\n{response["generation"]}\n\n")

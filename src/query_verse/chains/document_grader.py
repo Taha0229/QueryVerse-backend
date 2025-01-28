@@ -6,12 +6,8 @@ from query_verse.chat.parsers import GradeDocuments
 
 
 def create_document_grader_chain(
-    model: Optional[LanguageModelLike] = None,
+    model: Optional[LanguageModelLike] = ChatOpenAI(model="gpt-4o"),
 ):
-    _model = ChatOpenAI(model="gpt-4o")
-    
-    if model:
-        _model = model    
 
     system_prompt = """You are a grader assessing relevance of a retrieved document to a user question. 
     To do so, first understand the user's question. Mark the document and relevant ONLY if you are confident.
@@ -30,8 +26,7 @@ def create_document_grader_chain(
         ]
     )
 
-
     # Retriever grader chain
-    retrieval_grader = grade_prompt | _model.with_structured_output(GradeDocuments)
-    
+    retrieval_grader = grade_prompt | model.with_structured_output(GradeDocuments)
+
     return retrieval_grader

@@ -6,14 +6,11 @@ from query_verse.chat.parsers import GradeAnswer
 
 
 def create_answer_grader_chain(
-    model: Optional[LanguageModelLike] = None,
+    model: Optional[LanguageModelLike] = ChatOpenAI(model="gpt-4o"),
 ):
-    _model = ChatOpenAI(model="gpt-4o")
-    
-    if model:
-        _model = model    
+   
 
-    system_prompt = """You are a grader assessing whether an answer addresses / resolves a question
+    system_prompt = """You are a grader assessing whether an answer addresses / resolves a question.
      Give a binary score 'yes' or 'no'. Yes' means that the answer resolves the question."""
 
     answer_prompt = ChatPromptTemplate.from_messages(
@@ -25,6 +22,6 @@ def create_answer_grader_chain(
 
 
     # Retriever Answer Grader chain
-    answer_grader = answer_prompt | _model.with_structured_output(GradeAnswer)
+    answer_grader = answer_prompt | model.with_structured_output(GradeAnswer)
     
     return answer_grader

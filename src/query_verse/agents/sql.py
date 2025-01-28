@@ -1,28 +1,24 @@
-from typing import Any
-from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableLambda, RunnableWithFallbacks
-from langgraph.prebuilt import ToolNode
-
-from langchain_community.utilities import SQLDatabase
-from query_verse.config import BASE_DIR
-
-from langchain_community.agent_toolkits import SQLDatabaseToolkit
-from langchain_openai import ChatOpenAI
-from langchain_core.tools import tool
-from langchain_core.prompts import ChatPromptTemplate
-from langgraph.graph import END, StateGraph
-from typing import Annotated
-
-from langchain_core.messages import AIMessage
-from langchain_openai import ChatOpenAI
-
+from typing import Any, Annotated
 from typing_extensions import TypedDict
 
+from langchain_core.messages import ToolMessage, AIMessage
+from langchain_core.runnables import RunnableLambda, RunnableWithFallbacks
+from langchain_core.tools import tool
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 
+from langchain_community.utilities import SQLDatabase
+from langchain_community.agent_toolkits import SQLDatabaseToolkit
+
+from langgraph.prebuilt import ToolNode
+
+from langgraph.graph import END, StateGraph
 from langgraph.graph.message import AnyMessage, add_messages
 
+from query_verse.config import BASE_DIR
 
-class State(TypedDict):
+
+class SQLState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
     question: str
     query: str
@@ -30,8 +26,8 @@ class State(TypedDict):
 
 class SQLAgent:
     db = SQLDatabase.from_uri(f"sqlite:///{BASE_DIR}/test.db")
-    llm = ChatOpenAI(model="gpt-4o")
-    lighter_llm = ChatOpenAI(model="gpt-4o-mini")
+    llm = ChatOpenAI(model="gpt-4o", temperature=0)
+    lighter_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
     def __init__(self):
         toolkit = SQLDatabaseToolkit(db=self.db, llm=self.llm)
@@ -44,44 +40,55 @@ class SQLAgent:
             tool for tool in tools if tool.name == "sql_db_schema"
         )  # tool 2/3
 
-        workflow = StateGraph(State)
+        workflow = StateGraph(SQLState)
 
         workflow.set_entry_point("first_tool_call")
 
-        workflow.add_node("first_tool_call", self.first_tool_call)
+        workflow.add_node(
+            "first_tool_call", self.first_tool_call
+        )  # explicitly calling get all tables tool
         workflow.add_node(
             "list_tables_tool",
             self.create_tool_node_with_fallback([self.list_tables_tool]),
-        )  # This node will execute the tool raised by the above Node
-        workflow.add_edge("first_tool_call", "list_tables_tool")
-        workflow.add_edge("list_tables_tool", "model_get_schema")
+        )  # Tool Executor for the above node
 
-        workflow.add_node("model_get_schema", self.model_get_schema)
+        workflow.add_node(
+            "model_get_schema", self.model_get_schema
+        )  # LLM node, paired with get_schema_tool to pick relevant tables
         workflow.add_node(
             "get_schema_tool",
             self.create_tool_node_with_fallback([self.get_schema_tool]),
-        )  # This node will execute the tool raised by the above Node
-        workflow.add_edge("model_get_schema", "get_schema_tool")
+        )  # This node will execute the tool invoked by the above Node
 
-        workflow.add_node("query_gen", self.query_gen)
-        workflow.add_edge("get_schema_tool", "query_gen")
-
-        workflow.add_node("correct_query", self.model_check_query)
         workflow.add_node(
-            "execute_query", self.create_tool_node_with_fallback([self.db_query_tool])
-        )
+            "query_gen", self.query_gen
+        )  # generates first iteration of query
 
+        workflow.add_node(
+            "correct_query", self.model_check_query
+        )  # checks and executes the query
+        workflow.add_node(
+            "execute_query",
+            self.create_tool_node_with_fallback(
+                [self.db_query_tool]
+            ),  # Query executor tool
+        )
+        workflow.add_node(
+            "writer", self.writer
+        )  # takes the response and responds in natural language
+
+        workflow.add_edge("first_tool_call", "list_tables_tool")
+        workflow.add_edge("list_tables_tool", "model_get_schema")
+        workflow.add_edge("model_get_schema", "get_schema_tool")
+        workflow.add_edge("get_schema_tool", "query_gen")
         workflow.add_edge("query_gen", "correct_query")
         workflow.add_edge("correct_query", "execute_query")
-
-        workflow.add_node("writer", self.writer)
-
         workflow.add_edge("execute_query", "writer")
         workflow.add_edge("writer", END)
 
         self.agent = workflow.compile()
 
-    # utility functions
+    # utility methods
     def create_tool_node_with_fallback(
         self, tools: list
     ) -> RunnableWithFallbacks[Any, dict]:
@@ -92,7 +99,7 @@ class SQLAgent:
             [RunnableLambda(self.handle_tool_error)], exception_key="error"
         )
 
-    def handle_tool_error(self, state) -> dict:
+    def handle_tool_error(self, state: SQLState) -> dict:
         error = state.get("error")
         tool_calls = state["messages"][-1].tool_calls
         return {
@@ -107,8 +114,9 @@ class SQLAgent:
 
     def first_tool_call(
         self,
-        state: State,
+        state: SQLState,
     ) -> dict[str, list[AIMessage]]:  # This explicitly mimics a tool call by an LLM
+        print("----Getting all tables----")
         return {
             "messages": [
                 AIMessage(
@@ -139,11 +147,12 @@ class SQLAgent:
         return result
 
     # Nodes
-
-    def model_check_query(self, state) -> dict[str, list[AIMessage]]:
+    def model_check_query(self, state: SQLState) -> dict[str, list[AIMessage]]:
         """
         Use this tool to double-check if your query is correct before executing it.
         """
+        print("----Checking the generated SQL query----")
+        
         query_check_system = """You are a SQL expert with a strong attention to detail.
         Double check the SQLite query for common mistakes, including:
         - Using NOT IN with NULL values
@@ -162,33 +171,34 @@ class SQLAgent:
         query_check_prompt = ChatPromptTemplate.from_messages(
             [("system", query_check_system), ("placeholder", "{messages}")]
         )
-        query_check = query_check_prompt | ChatOpenAI(
-            model="gpt-4o", temperature=0
-        ).bind_tools([self.db_query_tool], tool_choice="required")
+        query_check = query_check_prompt | self.llm.bind_tools(
+            [self.db_query_tool], tool_choice="required"
+        )
 
         # messages[-1] assuming that the previous message is from query writer
         return {"messages": [query_check.invoke({"messages": [state["messages"][-1]]})]}
 
-    def model_get_schema(self, state):
-        get_schema = ChatOpenAI(model="gpt-4o", temperature=0).bind_tools(
-            [self.get_schema_tool]
-        )
+    def model_get_schema(self, state: SQLState):
+        print("----Getting Table Schema----")
+        get_schema = self.llm.bind_tools([self.get_schema_tool])
         res = get_schema.invoke(state["messages"])
 
         # This is returning list with one AIMessage
         return {"messages": [res]}
 
-    def query_gen(self, state):
+    def query_gen(self, state: SQLState):
+        print("----Getting SQL Query----")
         query_gen_system = """
             Context: 
-            You are a SQL expert with a strong attention to detail. Your role is to generate SQLite queries based on the user's question, provided schema and instructions. Below is the schema of the relevant table(s) for your reference:
+            You are a SQL expert with a strong attention to detail working in a multi-agent system. Your role is to generate SQLite queries based on the user's question, provided schema and instructions. 
+            Below is the schema of the relevant table(s) for your reference:
 
             {relevant_schema}
 
             Additionally, a few sample rows from the relevant table(s) are provided. These are strictly for your reference and should not influence the query results.
 
             Instructions:
-            1. Always limit your query to a maximum of 5 results unless the user explicitly specifies a different number.
+            1. Always limit your query to a maximum of 10 results unless the user explicitly specifies a different number.
             2. If a query execution results in an error, carefully rewrite the query to fix the issue and try again.
             3. If the provided schema does not contain enough information to fulfill the user's request, respond with: "I do not have enough information to answer your query."
             4. Never perform any DML (Data Manipulation Language) operations such as INSERT, UPDATE, DELETE, or DROP. Only generate SELECT queries or other safe read-only queries.
@@ -203,16 +213,18 @@ class SQLAgent:
             if isinstance(msg, ToolMessage) and msg.name == "sql_db_schema":
                 schema.append(msg.content)
 
-        chain = query_gen_prompt | ChatOpenAI(model="gpt-4o")
-        res = chain.invoke(
+        generate = query_gen_prompt | self.llm
+        res = generate.invoke(
             {"question": state["question"], "relevant_schema": "\n\n".join(schema)}
         )
         return {"query": res, "messages": [res]}
 
-    def writer(self, state):
+    def writer(self, state: SQLState):
+        print("----Writing final response----")
         system_prompt = """You are writer agent working in a multi-agent system. 
-        You will be provided with the user's question its response generated by the SQL Agent. 
-        Your task is to write a final answer to the user based."""
+        You will be provided with the user's question and its response generated by the SQL Agent. 
+        Your task is to write a final answer to the user based.
+        """
 
         writer_prompt = ChatPromptTemplate.from_messages(
             [("system", system_prompt), ("human", "{question}"), ("ai", "{response}")]
@@ -222,3 +234,27 @@ class SQLAgent:
             {"question": state["question"], "response": state["messages"][-1].content}
         )
         return {"messages": [res]}
+
+
+if __name__ == "__main__":
+    from langchain_core.messages import HumanMessage
+
+    sql_agent = SQLAgent()
+    questions = [
+        "how many users are there?",
+        "who has purchased the most products?",
+        "What is the price of iphone 14",
+        "List the products purchased by Jack",
+        "What is the total order value",
+        "Which is the most expensive product that you have",
+        "How much does Harry and Issac has spent till now",
+        "What all products has leo has purchased",
+        "Who has bought the most number of products"
+    ]
+    from query_verse.config import BASE_DIR
+
+    with open(f"{BASE_DIR}/tests/SQL/output.txt", "a", encoding="utf-8") as file:
+        for ind, question in enumerate(questions):
+            response = sql_agent.agent.invoke({"question": question, "messages": [HumanMessage(content=question)]})
+            file.writelines(f"{ind+1}. {question}\n{response["messages"][-1].content}\n\n")
+

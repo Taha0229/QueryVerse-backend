@@ -7,12 +7,8 @@ from langchain_core.output_parsers import StrOutputParser
 
 
 def create_query_transformer_chain(
-    model: Optional[LanguageModelLike] = None,
-):
-    _model = ChatOpenAI(model="gpt-4o-mini")
-    
-    if model:
-        _model = model    
+    model: Optional[LanguageModelLike] = ChatOpenAI(model="gpt-4o-mini"),
+):   
 
     system_prompt = """You are a question re-writer that converts an input question to a better version that is optimized 
      for vectorstore retrieval. Look at the input and try to reason about the underlying semantic intent / meaning."""
@@ -29,6 +25,6 @@ def create_query_transformer_chain(
 
 
     # Retriever grader chain
-    query_transformer_chain = re_write_prompt | _model | StrOutputParser()
+    query_transformer_chain = re_write_prompt | model | StrOutputParser()
     
     return query_transformer_chain

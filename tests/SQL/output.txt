@@ -1,0 +1,37 @@
+1. how many users are there?
+There are 14 users.
+
+2. who has purchased the products?
+The following individuals have purchased products:
+
+- Alice: Apple Iphone 14, Asus TUF A15
+- Bob: Sony Alpha 7
+- Charlie: Nvidia RTX 5090, Kingston HyperX 8 GB RAM
+- Diana: Apple Iphone 14, Nvidia RTX 5090
+- Eve: Asus TUF A15
+- Fauna: Legion M600
+- George: Legion M600
+
+3. What is the price of iphone 14
+The price of the iPhone 14 is $1999.99.
+
+4. List the products purchased by Jack
+Jack purchased the Nvidia RTX 5090.
+
+5. What is the total order value
+It seems there was an error while trying to retrieve the total order value due to a missing table in the database. Unfortunately, I cannot provide the total order value at this moment. Please check the database setup or try again later. If you have any other questions or need assistance, feel free to ask!
+
+6. Which is the most expensive product that you have
+The most expensive product we have is the Nvidia RTX 5090, priced at $2,099.99.
+
+7. How much does Harry and Issac has spent till now
+It seems there was an error while trying to retrieve the spending information for Harry and Isaac. The database query could not find the necessary table. 
+
+To assist you better, could you please provide more details about their spending or the specific context? Alternatively, I can help you troubleshoot the issue if you have access to the database.
+
+8. What all products has leo has purchased
+It seems there was an issue retrieving the information about the products purchased by Leo. Could you please rephrase your question or provide more details? This will help me assist you better.
+
+9. Who has bought the most number of products
+The person who has bought the most number of products is Diana, with a total of 6 purchases.
+

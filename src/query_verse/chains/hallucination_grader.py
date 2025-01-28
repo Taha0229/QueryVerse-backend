@@ -6,12 +6,8 @@ from query_verse.chat.parsers import GradeHallucinations
 
 
 def create_hallucination_grader_chain(
-    model: Optional[LanguageModelLike] = None,
+    model: Optional[LanguageModelLike] = ChatOpenAI(model="gpt-4o"),
 ):
-    _model = ChatOpenAI(model="gpt-4o")
-
-    if model:
-        _model = model
 
     system_prompt = """You are a grader assessing whether an LLM generation is grounded in/supported by a set of retrieved facts.
      Give a binary score 'yes' or 'no'. 'Yes' means that the answer is grounded in/supported by the set of facts."""
@@ -27,6 +23,8 @@ def create_hallucination_grader_chain(
     )
 
     # Hallucination grader chain
-    hallucination_grader = hallucination_prompt | _model.with_structured_output(GradeHallucinations)
+    hallucination_grader = hallucination_prompt | model.with_structured_output(
+        GradeHallucinations
+    )
 
     return hallucination_grader

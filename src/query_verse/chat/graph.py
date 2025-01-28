@@ -4,150 +4,59 @@ from langgraph.graph import StateGraph, END, START
 from langgraph.graph.message import add_messages
 
 from typing import Optional, TypedDict, Annotated
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.prebuilt import ToolNode
 from langchain_core.tools import tool
 from langchain_core.prompts import ChatPromptTemplate
 
 
 
-from query_verse.chains.supervisor import create_supervisor
 from query_verse.agents.rag import RAGAgent
 from query_verse.agents.sql import SQLAgent
 from query_verse.chains.conversational import create_conversational_chain
 
 load_dotenv(find_dotenv())
-
-
-# class AgentState(TypedDict):
-#     messages: Annotated[
-#         list, add_messages
-#     ]  # after completion messages[-1] has to be AI response and messages[-2] has to be HumanMessage
-#     question: str
-#     curr_date: str
-
-
-# class Graph:
-#     llm = ChatOpenAI(model="gpt-4o")
-#     lighter_llm = ChatOpenAI(model="gpt-4o-mini")
-
-#     def __init__(self, checkpointer: Optional[str] = None):?
-#         self.supervisor = create_supervisor(model=self.llm)
-#         self.rag = RAGAgent()
-#         self.sql = SQLAgent()
-#         self.conversation_chain = create_conversational_chain(model=self.lighter_llm)
-
-#         graph = StateGraph(AgentState)
-
-#         graph.add_node("rag_agent", self.rag_agent)
-#         graph.add_node("conversational_agent", self.conversational_agent)
-#         graph.add_node("sql_agent", self.sql_agent)
-
-#         graph.add_conditional_edges(
-#             START,
-#             self.supervise,
-#             {
-#                 "SQL Agent": "sql_agent",
-#                 "RAG Agent": "rag_agent",
-#                 "Conversational Agent": "conversational_agent",
-#                 "FINISH": END
-#             },
-#         )
-
-#         graph.add_edge("rag_agent", END)
-#         graph.add_edge("conversational_agent", END)
-#         graph.add_edge("sql_agent", END)
-
-#         self.graph = graph.compile(checkpointer=checkpointer)
-
-#     def supervise(self, state: AgentState):
-#         print("---- SUPERVISOR -----")
-#         res = self.supervisor.invoke({"question": state["question"]})
-#         print(res)
-#         return res.next
-
-#     def rag_agent(self, state: AgentState):
-#         print("---- NAVIGATING TO RAG ----")
-#         return self.rag.agent.invoke(
-#             state
-#         )  # updating the Graph's state with overlapping keys in RAG state -> The messages in RAG is handled in a way to just return final AI message
-
-#     def conversational_agent(self, state: AgentState):
-#         print("---- CONVERSATIONAL AGENT -----")
-#         conv_res = self.conversation_chain.invoke({"question": state["question"]})
-#         return {"messages": [AIMessage(content=conv_res, name="conversational_agent")]}
-
-#     def sql_agent(self, state: AgentState):
-#         print("---- SQL Agent ----")
-#         res = self.sql.agent.invoke(state)
-#         return {"messages": [res["messages"][-1]]}
-
-
-# test code
-
-# def carry_test():
-#     bot = Graph()
-#     start = True
-#     while start:
-#         inp = input("Enter your question: ")
-#         res = bot.graph.invoke(
-#             {"question": inp, "messages": [HumanMessage(content=inp)]}
-#         )
-#         print(res)
-#         should_stop = input(
-#             "Do you want to stop? Press Y to stop any other key to continue: "
-#         )
-#         if should_stop.lower() == "y":
-#             start = False
-#         else:
-#             continue
-
-
-# carry_test()
-
-
-class PlannerState(TypedDict):
+class SupervisorState(TypedDict):
     messages: Annotated[list, add_messages]
     question: str
     curr_date: str
 
-
-class PlannerAgent:
+class SupervisorAgent:
     rag = RAGAgent()
     sql = SQLAgent()
     conv_agent = create_conversational_chain()
     
     def __init__(self, checkpointer: Optional[str] = None):
-        workflow = StateGraph(PlannerState)
+        workflow = StateGraph(SupervisorState)
 
         self.tools = [self.rag_agent, self.sql_agent, self.conversational_agent]
         self.tools_node = ToolNode(self.tools)
 
-        workflow.add_node("planner", self.planner)
+        workflow.add_node("supervisor", self.supervise)
         workflow.add_node("tools", self.tools_node)
-        workflow.add_edge("tools", "planner")
+        workflow.add_edge("tools", "supervisor")
         workflow.add_conditional_edges(
-            "planner", self.should_continue, ["tools", END]
+            "supervisor", self.should_continue, ["tools", END]
         )
-        workflow.set_entry_point("planner")
+        workflow.set_entry_point("supervisor")
 
 
 
         self.agent = workflow.compile(checkpointer=checkpointer)
 
-    def should_continue(self, state: PlannerState):
+    def should_continue(self, state: SupervisorState):
         messages = state["messages"]
         last_message = messages[-1]
         if last_message.tool_calls:
             return "tools"
         return END
 
-    def planner(self, state: PlannerState):
+    def supervise(self, state: SupervisorState):
 
         system_prompt = """
         Context:
-        1. You are a planner, responsible for understanding the user's intend, facilitating the collaborations between agents. 
-        You have been paired with two agents to carry out tasks around Orders, Users and Products.
+        1. You are a supervisor, responsible for understanding the user's intend, and facilitating the collaborations between agents. 
+        You have been paired with three agents to carry out tasks around Orders, Users and Products.
         names of the agents: {members}
 
         2. Worker Details and Capabilities:
@@ -161,11 +70,12 @@ class PlannerAgent:
         - The Conversation Agent should handle casual or open-ended interactions.   
 
         Instructions:  
-        1. If you think only one agent is enough to fulfill the user's question then invoke only one agent.
-        2. If collaboration among the agents are required, you may invoke the agents with the part of the user's question that the they can handle. 
-        3. The agents will provide their response once they are done.
-        4. Continue delegating tasks until the request is resolved.  
-        5. When using conversational agent just pass the user's question as it is without any modification
+        1. DO NOT use your trained knowledge to answer a question.
+        2. If you think only one agent is enough to fulfill the user's question then invoke only one agent.
+        3. If collaboration among the agents are required, you may invoke the agents with the part of the user's question that they can handle. 
+        4. The agents will provide their response once they are done.
+        5. Continue delegating tasks until the request is resolved. 
+        6. When using conversational agent just pass the user's question as it is without any modification
         """
 
         _members = ["rag_agent", "sql_agent", "conversational_agent"]
@@ -190,9 +100,9 @@ class PlannerAgent:
             str, "The query or the part of the query that the rag_agent can handle."
         ]
     ):
-        """The rag_agent can provide comprehensive details on all kind of products which are in the Products table as well as which are not using retrieval augmented generation paired with web searching capabilities"""
+        """The rag_agent can provide comprehensive details on all kind of products which are in the Products table as well as which are not; using retrieval augmented generation paired with web searching capabilities"""
         print("rag_agent called")
-        res = PlannerAgent.rag.agent.invoke({"question": question})
+        res = SupervisorAgent.rag.agent.invoke({"question": question})
         return res["generation"]
 
     @staticmethod
@@ -204,7 +114,7 @@ class PlannerAgent:
     ):
         """The sql_agent has direct access of SQL database which has Orders, Products and Users tables. The Products table includes limited inventory details: product ID, product name, and product price only, if further details on products are required, then you may call rag_agent"""
         print("sql_agent called")
-        res = PlannerAgent.sql.agent.invoke({"question": question})
+        res = SupervisorAgent.sql.agent.invoke({"question": question, "messages": [HumanMessage(content=question)]})
         return res["messages"][-1].content
     
     @staticmethod
@@ -215,5 +125,47 @@ class PlannerAgent:
         """The conversational agent is responsible to respond to casual conversation and greetings"""
         
         print("conversational agent called")
-        res = PlannerAgent.conv_agent.invoke({"question": question})
+        res = SupervisorAgent.conv_agent.invoke({"question": question})
         return res
+    
+    
+    
+if __name__ == "__main__":
+    from langchain_core.messages import HumanMessage
+
+    agent = SupervisorAgent()
+    questions = [
+        "who has purchased the most products?",
+        "What is the price of iphone 14",
+        "What all products has Neo has purchased",
+        "Who has bought the most number of products",
+        "Hello",
+        "What is your name?",
+        "What are the key features of iphone 14",
+        "What is Legion M600",
+        "Compare between Samsung S24 and iphone 14",
+        "What are features of Google Pixel 9",
+        "What is the price of Realme 9 Pro Plus in India",
+        "Can you get me details of product with product id 5",
+        "Provide in depth details of the products that Alice has purchased",
+        "Find me insights on most ordered product",
+        "What are features of cheapest product"
+    ]    
+    questions = [
+        # "who has purchased the most products?",
+        # "What is the price of iphone 14",
+        # "What all products has Neo has purchased",
+        # "Who has bought the most number of products",
+        "Can you get me details of product with product id 5",
+        "Provide in depth details of the products that Alice has purchased",
+        "Find me insights on most ordered product",
+        "What are features of cheapest product"
+    ]
+    
+    from query_verse.config import BASE_DIR
+
+    with open(f"{BASE_DIR}/tests/QueryVerse/output.txt", "a", encoding="utf-8") as file:
+        for ind, question in enumerate(questions):
+            print(f"/*--- Performing: {question} ---*/")
+            response = agent.agent.invoke({"question": question, "messages": [HumanMessage(content=question)]})
+            file.writelines(f"{ind+1}. {question}\n{response["messages"][-1].content}\n\n")
