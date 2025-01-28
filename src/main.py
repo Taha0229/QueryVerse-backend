@@ -89,3 +89,4 @@ def get_message_history(req: AddConversationHistory):
         return {"message": "successfully added conversation", "chat": chat_entry}
     else:
         return {"message": "Something went wrong"}
+    

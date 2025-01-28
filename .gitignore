@@ -18,7 +18,6 @@ dev/
 # Logs and local database files
 *.log
 *.sqlite3
-*.db
 
 # Python egg files
 *.egg
